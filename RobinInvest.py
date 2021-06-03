@@ -10,8 +10,6 @@ totp = pyotp.TOTP('').now()
 login = r.login('', '', mfa_code = totp)
 print("Current OTP:", totp)
 
-final_records = pd.DataFrame()
-
 def quote(SYBL):
     sInfo = r.get_latest_price(SYBL)
     print(SYBL.upper() + ": $" + str(sInfo[0]))
@@ -43,48 +41,75 @@ def historical(SYBL):
         high_price = float(iter['high_price'])
         low_price = float(iter['low_price'])
         volume = int(iter['volume'])
-        ##sp_price = str(sp_iter['open_price'])
+        
+        #sp_open = float(sp_iter['open_price'])
+        #sp_close = float(sp_iter['close_price'])
 
         #previous price to initial price is the initial price, so %change is 0 
         if prev_price == 1:
             prev_price = float(open_price)
-            #prev_sp_price = float(sp_price)
+            #prev_sp_price = float(sp_open)
 
         
         change = str(float((float(close_price) - prev_price)/prev_price)*100)
-        #sp_change = str(float((float(sp_price) - prev_sp_price)/prev_sp_price)*100)
+        #sp_change = str(float((float(sp_close) - prev_sp_price)/prev_sp_price)*100)
 
         change_deci = float(change)
-        
-        #assuming starting with $20
-        buy_per = 0
-        if change_deci<=-0.75 and change_deci>-1.25:
-            buy_per = 0.05
-        elif change_deci<=-1.25 and change_deci>-1.75:
-            buy_per = 0.1
-        elif change_deci<=-1.75 and change_deci>-2.5:
-            buy_per = 0.15
-        elif change_deci<=-2.5 and change_deci>-5.0:
-            buy_per = 0.2
-        elif change_deci<=-5.0 and change_deci>-7.5:
-            buy_per = 0.25
-        elif change_deci<=-7.5:
-            buy_per = 0.30
             
 
-        records.append([date, open_price, close_price, high_price, low_price, volume, time, change_deci, buy_per])
+        records.append([date, time, open_price, close_price, high_price, low_price, volume, change_deci])
         ##[date, time, price, change]
 
         #print(date + ' - ' + time + ' ---- $' + price + ' -- ' + change + ' %')
         prev_price = float(close_price)
-        #prev_sp_price = float(sp_price)
+        #prev_sp_price = float(sp_close)
     df_records = pd.DataFrame.from_records(records)
-    df_records.columns=['date', 'open', 'close', 'high', 'low', 'vol', 'time', '%change', 'buy']
-    print (df_records)
+    df_records.columns=['date', 'time', 'open', 'close', 'high', 'low', 'vol', '%change']
+    
+    df_des = df_records.describe(percentiles=[0.0001, 0.001, 0.01, 0.025, 0.05, 0.075, 0.1, 0.125, 0.15, 0.175, 0.2, 0.225, 0.25])
+    
+    #assuming starting with $20
+    df_buy = pd.DataFrame()
+    buy = []
+    #df_buy.columns=['buy']
+    
+    for change_deci in list(df_records['%change']):
+        if change_deci<=df_des['%change']['25%'] and change_deci>df_des['%change']['22.5%']:
+            buy.append(0.05)
+        elif change_deci<=df_des['%change']['22.5%'] and change_deci>df_des['%change']['20%']:
+            buy.append(0.075)
+        elif change_deci<=df_des['%change']['20%'] and change_deci>df_des['%change']['17.5%']:
+            buy.append(0.1)
+        elif change_deci<=df_des['%change']['17.5%'] and change_deci>df_des['%change']['15%']:
+            buy.append(0.125)
+        elif change_deci<=df_des['%change']['15%'] and change_deci>df_des['%change']['12.5%']:
+            buy.append(0.15)
+        elif change_deci<=df_des['%change']['12.5%'] and change_deci>df_des['%change']['10%']:
+            buy.append(0.175)
+        elif change_deci<=df_des['%change']['7.5%'] and change_deci>df_des['%change']['5%']:
+            buy.append(0.20)
+        elif change_deci<=df_des['%change']['5%'] and change_deci>df_des['%change']['2.5%']:
+            buy.append(0.225)
+        elif change_deci<=df_des['%change']['2.5%'] and change_deci>df_des['%change']['1%']:
+            buy.append(0.25)
+        elif change_deci<=df_des['%change']['1%'] and change_deci>df_des['%change']['0.1%']:
+            buy.append(0.275)
+        elif change_deci<=df_des['%change']['0.1%'] and change_deci>df_des['%change']['0.01%']:
+            buy.append(0.3)
+        else:
+            buy.append(0.0)
 
-
+    df_buy = pd.DataFrame(buy)
+    df_buy.columns=['buy']
+    
+    df_records = pd.concat([df_records, df_buy], axis = 'columns')
+    print(df_records)
+    
 historical('SQ')
+    
+#what if keeps on falling
 
 ##fix int to day
 ##research trends in VOO/S&P500
 ##Implement invest Method
+

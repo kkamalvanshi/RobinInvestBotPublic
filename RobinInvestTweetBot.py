@@ -1,7 +1,7 @@
-import tweepy
-import robin_stocks.robinhood as r
+from robin_stocks import robinhood as r
 import pyotp
 import time
+import tweepy
 
 totp = pyotp.TOTP('').now()
 login = r.login('', '', mfa_code = totp)
@@ -24,47 +24,52 @@ api = tweepy.API(auth)
 
 filename = 'LastSeenMentions.txt'
 
-#copied from CS DOJO (twitter bot python video)
-def retreive_last_seen_id(file):
+def stored_ids(file):
     file_read = open(file, 'r')
-    last_seen_id = int(file_read.read().strip())
+    ids = (file_read.readlines())[0].split(',')
     file_read.close()
-    return last_seen_id
+    
+    print('returning ids')
+    return ids
 #Work on Tweet Retreival
 
-#copied from CS DOJO (twitter bot python video)
-def store_last_seen_id(last_seen_id, file):
-    file_write = open(file, 'w')
-    file_write.write(str(last_seen_id))
+def store_new_id(latest_id, file):
+    file_write = open(file, 'a')
+    file_write.write(',' + str(latest_id))
     file_write.close()
+    print('adding id')
     return
 
 def reply_quote():
-    last_seen_id = retreive_last_seen_id(filename)
-    mentions = api.mentions_timeline(last_seen_id, tweet_mode = 'extended')
+    stored = stored_ids(filename)
+    #mentions = api.mentions_timeline(last_seen_id, tweet_mode = 'extended')
 
     print('retrieving and replying...')
 
     mentions = api.mentions_timeline()
     for mention in reversed(mentions):
-        print(str(mention.id) + ' - ' + str(mention.text))
+        mention_id = str(mention.id)
+        #print('mention_id: ' + str(mention_id))
+        #print('stored ids: ' + str(stored))
+        if mention_id not in stored:
+            print('mention_id not in stored')
+            print(str(mention.id) + ' - ' + str(mention.text))
 
-        last_seen_id = mention.id
-        store_last_seen_id(last_seen_id, filename)
+            last_seen_id = mention.id
+            store_new_id(last_seen_id, filename)
 
-        men_txtlst = str(mention.text).split(' ')
-        if len(men_txtlst) == 2:
-            try:
-                status = quote(str(mention.text).split(' ')[1])
-                print('found ticker and price...')
-                print('posting quote...')
-                api.update_status('@' + mention.user.screen_name + ' ' + status, str(mention.id))
-            except:
-                api.update_status('@' + mention.user.screen_name + ' requested stock ticker does not exist', str(mention.id))
+            men_txtlst = str(mention.text).split(' ')
+            if len(men_txtlst) == 2:
+                try:
+                    status = quote(str(mention.text).split(' ')[1])
+                    print('found ticker and price...')
+                    print('posting quote...')
+                    api.update_status('@' + mention.user.screen_name + ' ' + status, str(mention.id))
+                except:
+                    api.update_status('@' + mention.user.screen_name + ' requested stock ticker does not exist', str(mention.id))
 
 while True:
     reply_quote()
-    time.sleep(15)    
-#print(r.get_latest_price('SQ'))
+    time.sleep(10) #shouldn't exceed 5 or else runs out of requests
 
 #api.update_status(str(status))

@@ -60,14 +60,50 @@ def reply_quote():
 
             men_txtlst = str(mention.text).split(' ')
             if len(men_txtlst) == 2:
-                try:
-                    status = quote(str(mention.text).split(' ')[1])
+                SYBL = str(mention.text).split(' ')[1]
+                image_today(SYBL)
+                status = quote(SYBL)
+                if status != None:
                     print('found ticker and price...')
                     print('posting quote...')
-                    api.update_status('@' + mention.user.screen_name + ' ' + status, str(mention.id))
-                except:
+                    
+                    print('uploading...')
+                    api.update_with_media('C:\\Users\\kkama\\OneDrive\\Documents\\RobinInvestImages\\image.png', 
+                        '@' + mention.user.screen_name + ' ' + status, 
+                        in_reply_to_status_id = str(mention.id))
+                    print('finished uploading.')
+                else:
+                    api.update_status('@' + mention.user.screen_name + ' requested stock ticker does not exist', str(mention.id))
+            if len(men_txtlst) == 3 and (str(mention.text).split(' ')[2] == '3m'):
+                SYBL = str(mention.text).split(' ')[1]
+                image_3m(SYBL)
+                status = quote(SYBL)
+                if status != None:
+                    print('found ticker and price...')
+                    print('posting quote...')
+                    
+                    print('uploading...')
+                    api.update_with_media('C:\\Users\\kkama\\OneDrive\\Documents\\RobinInvestImages\\image.png', 
+                        '@' + mention.user.screen_name + ' ' + status, 
+                        in_reply_to_status_id = str(mention.id))
+                    print('finished uploading.')
+                else:
                     api.update_status('@' + mention.user.screen_name + ' requested stock ticker does not exist', str(mention.id))
 
+def tweet_quote_image(SYBL):
+    image_today(SYBL)
+    status = quote(str(SYBL).split(' ')[0])
+    media = api.update_with_media('C:\\Users\\kkama\\OneDrive\\Documents\\RobinInvestImages\\image.png', status)
+
+#while True:
+#    reply_quote()
+#    time.sleep(15)
+
+tweet_quote_image('COIN')
+#print(r.get_latest_price('SQ'))
+
+##Find earnings call date for some companies and post price day after
+                    
 while True:
     reply_quote()
     time.sleep(10) #shouldn't exceed 5 or else runs out of requests
